@@ -1,0 +1,41 @@
+# SYMBOLS.TXT - Your Stock Watchlist
+# ====================================
+# Add one symbol per line
+# Lines starting with # are comments (ignored)
+# Empty lines are ignored
+# Symbols are automatically converted to uppercase
+
+# TECHNOLOGY
+AAPL
+MSFT
+GOOGL
+META
+NVDA
+TSLA
+AMD
+INTC
+
+# HEALTHCARE
+UNH
+JNJ
+LLY
+
+# FINANCE
+JPM
+BAC
+GS
+
+# ENERGY
+XOM
+CVX
+
+# Add your own symbols below:
+
+
+# TIPS:
+# - Keep it simple: 5-10 symbols recommended
+# - More symbols = longer execution time
+# - Comment out symbols you want to temporarily disable with #
+# - Save this file and restart your bot
+
+

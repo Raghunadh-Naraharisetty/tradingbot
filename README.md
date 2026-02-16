@@ -469,3 +469,4 @@ Remember: This is a learning tool. The goal is education, not getting rich quick
 ---
 
 **Good luck on your trading and programming journey! 🚀📈**
+"# tradebot" 

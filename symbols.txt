@@ -30,7 +30,16 @@ XOM
 CVX
 
 # Add your own symbols below:
-
+PFE
+KEY
+HBAN
+AES
+VICI
+KMI
+CMCSA
+HRL
+CTRA
+IVZ
 
 # TIPS:
 # - Keep it simple: 5-10 symbols recommended

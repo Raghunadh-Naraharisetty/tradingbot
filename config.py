@@ -8,7 +8,66 @@ Think of it as the "settings menu" of your bot.
 # TRADING SETTINGS
 # ================
 # Initial capital: How much money you're starting with
-INITIAL_CAPITAL = 100.00
+INITIAL_CAPITAL = 100000.00  # Alpaca gives $100k paper
+
+# HOW POSITION SIZING WORKS:
+# Alpaca gives you $100,000 paper money
+# MAX_POSITION_SIZE = what % to use per trade
+#
+# Examples:
+#   0.02 = 2%  = $2,000 per trade  ← YOU WANT THIS
+#   0.05 = 5%  = $5,000 per trade
+#   0.10 = 10% = $10,000 per trade
+#   0.30 = 30% = $30,000 per trade (too risky!)
+
+# ── POSITION SIZING ──────────────────────────────────────────
+MAX_POSITION_SIZE = 0.02      # 2% = ~$2,000 per trade
+
+# ── RISK MANAGEMENT ──────────────────────────────────────────
+STOP_LOSS_PERCENT = 0.05      # Exit if price drops 5%  = -$100 max loss
+TAKE_PROFIT_PERCENT = 0.10    # Exit if price rises 10% = +$200 target
+
+# RISK/REWARD RATIO:
+# Risk:   $2,000 × 5%  = $100 per trade
+# Reward: $2,000 × 10% = $200 per trade
+# Ratio: 1:2 (risking $100 to make $200) ← GOOD!
+
+# ── PAPER TRADING ────────────────────────────────────────────
+PAPER_TRADING = True          # KEEP TRUE until consistently profitable!
+INITIAL_CAPITAL = 100000.00   # Alpaca paper account ($100k)
+
+# ── WHAT $2000 PER TRADE MEANS ───────────────────────────────
+# If AAPL is at $180:
+#   $2,000 / $180 = 11 shares bought
+#
+# If NVDA is at $875:
+#   $2,000 / $875 = 2 shares bought
+#
+# Maximum simultaneous trades:
+#   $100,000 / $2,000 = 50 trades max (but you only have 16 symbols)
+#   So all 16 symbols could have open trades = $32,000 max exposure
+#   Remaining cash: $68,000 always available
+
+# ── TO USE REAL MONEY LATER ──────────────────────────────────
+# When you're ready for real trading (months from now):
+# 1. Create Alpaca LIVE account (not paper)
+# 2. Deposit real money (recommend starting with $5,000-$10,000)
+# 3. Get live API keys from Alpaca dashboard
+# 4. Update .env file:
+#    ALPACA_BASE_URL=https://api.alpaca.markets  (remove "paper-")
+#    ALPACA_API_KEY=your_LIVE_key
+#    ALPACA_SECRET_KEY=your_LIVE_secret
+# 5. Change MAX_POSITION_SIZE to match your real capital
+#    Example: Real $5,000 account, want $200 per trade:
+#    MAX_POSITION_SIZE = 0.04  (4% of $5,000 = $200)
+# 6. Keep STOP_LOSS_PERCENT and TAKE_PROFIT_PERCENT the same
+
+# ── DO NOT RUSH TO REAL MONEY ────────────────────────────────
+# Paper trade for at least 3-6 months
+# Must be consistently profitable
+# Must understand WHY signals work
+# Start real trading with small amounts ($100-500)
+
 
 # STOCK SYMBOLS BY SECTOR
 # =======================
@@ -235,7 +294,7 @@ TIMEFRAME = '1d'  # Daily candles (easier for beginners)
 
 # Historical data period for analysis
 # Options: '1d', '5d', '1mo', '3mo', '6mo', '1y'
-DATA_PERIOD = '6mo'  # 6 months of historical data
+DATA_PERIOD = '1mo'  # 6 months of historical data
 
 
 # MULTI-STRATEGY SYSTEM CONFIGURATION
@@ -255,9 +314,9 @@ DATA_PERIOD = '6mo'  # 6 months of historical data
 STRATEGIES_ENABLED = {
     'ma_crossover': True,   # Moving Average Crossover
     'rsi': True,            # RSI confirmation
-    'macd': True,           # MACD (NEW!)
-    'bollinger': True,      # Bollinger Bands (NEW!)
-    'volume': True          # Volume confirmation (NEW!)
+    'macd': False,           # MACD (NEW!)
+    'bollinger': False,      # python signal_checker.pyBollinger Bands (NEW!)
+    'volume': False          # Volume confirmation (NEW!)
 }
 
 # VOTING SYSTEM
@@ -269,7 +328,7 @@ STRATEGIES_ENABLED = {
 #   'any' - Any single strategy triggers trade (most aggressive)
 #   Number (e.g., 3) - Exactly N strategies must agree
 
-STRATEGY_VOTE_REQUIRED = 'majority'  # Recommended: 'majority'
+STRATEGY_VOTE_REQUIRED = 'any'  # Recommended: 'majority'
 
 # If using number: how many strategies must agree
 # MIN_STRATEGIES_AGREE = 3  # Uncomment and set if using number
@@ -278,19 +337,19 @@ STRATEGY_VOTE_REQUIRED = 'majority'  # Recommended: 'majority'
 # STRATEGY 1: MOVING AVERAGE CROSSOVER
 # =====================================
 # Fast (Short-term) Moving Average
-MA_FAST_PERIOD = 10  # Reacts quickly to price changes
+MA_FAST_PERIOD = 3  # Reacts quickly to price changes
                      # Common values: 9, 10, 12, 20
 
 # Slow (Long-term) Moving Average  
-MA_SLOW_PERIOD = 30  # Shows overall trend
+MA_SLOW_PERIOD = 10  # Shows overall trend
                      # Common values: 26, 30, 50, 200
 
 
 # STRATEGY 2: RSI (RELATIVE STRENGTH INDEX)
 # ==========================================
 RSI_PERIOD = 14       # Standard RSI calculation period
-RSI_OVERSOLD = 30     # Below this = oversold (potential buy)
-RSI_OVERBOUGHT = 70   # Above this = overbought (potential sell)
+RSI_OVERSOLD = 50     # Below this = oversold (potential buy)
+RSI_OVERBOUGHT = 50   # Above this = overbought (potential sell)
 
 
 # STRATEGY 3: MACD (Moving Average Convergence Divergence)
@@ -367,3 +426,34 @@ PAPER_TRADING = True  # True = Simulated (no real money)
 LOG_LEVEL = 'INFO'  # How much information to display
 LOG_TO_FILE = True
 LOG_FILE = 'trading_bot.log'
+
+# ===== TESTING CONFIGURATION =====
+# This will generate signals for testing
+# After confirming bot works, adjust back to stricter settings
+
+STRATEGIES_ENABLED = {
+    'ma_crossover': True,
+    'rsi': True,
+    'macd': False,
+    'bollinger': False,
+    'volume': False
+}
+
+STRATEGY_VOTE_REQUIRED = 'any'  # ⭐ Change this!
+
+# More sensitive for testing
+MA_FAST_PERIOD = 5
+MA_SLOW_PERIOD = 15
+RSI_PERIOD = 14
+RSI_OVERSOLD = 40
+RSI_OVERBOUGHT = 60
+
+PERIOD = '3mo'
+TIMEFRAME = '1d'
+
+# Paper trading
+PAPER_TRADING = True
+INITIAL_CAPITAL = 100.00
+MAX_POSITION_SIZE = 0.3
+STOP_LOSS_PERCENT = 0.05
+TAKE_PROFIT_PERCENT = 0.10

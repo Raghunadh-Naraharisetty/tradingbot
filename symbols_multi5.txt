@@ -1,0 +1,27 @@
+# SYMBOLS_MULTI5.TXT - Multi5 System Symbols
+# ===========================================
+# Symbols for the 5-strategy system
+# Can be same or different from your Simple system
+
+# Multi5 is better for swing trading and volatile stocks
+# These symbols tend to have strong trends and clear signals
+
+# VOLATILE TECH (Good for Multi5)
+NVDA
+TSLA
+AMD
+META
+
+# STABLE BLUE CHIPS (Also good for Multi5)
+AAPL
+MSFT
+
+# You can use different symbols than your Simple system
+# Or use the same - up to you!
+# Multi5 will give fewer but higher quality signals
+
+# Tips:
+# - Multi5 works well with trending stocks
+# - Volatile stocks give clearer signals with 5 strategies
+# - Can test with different symbols than Simple system
+# - Compare which stocks work better with Multi5

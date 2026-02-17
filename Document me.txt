@@ -1,0 +1,50 @@
+config.py		-	All settings (strategies, capital, risk)	✅ Essential
+model.py		-	Trading logic (strategies, indicators)		✅ Essential
+view.py			-	Terminal display				✅ Essential
+controller.py		-	Coordinates everything				✅ Essential
+main.py			-	Manual backtesting				✅ Use for testing
+symbols.txt		-	Your stock list (AAPL, MSFT, etc.)		✅ Essential
+
+scheduler.py		-	Auto-runs every hour/30min			✅ Essential
+telegram_bot.py		-	Sends alerts to phone				✅ Essential
+.env			-	Your Telegram token & chat ID			✅ Essential
+
+dashboard.py		-	Detailed charts for ONE stock			Good for deep analysis
+matrix_dashboard.py	-	ALL stocks, ALL strategies table		Too complex (you said)
+simple_matrix.py	-	Clean list, confidence scores			Better but not deployed yet
+
+symbol_loader.py	-	Manage symbols easily				✅ Helpful
+sector_viewer.py	-	View stock sectors				⚪ Optional
+quick_start.py		-	Test installation				⚪ Optional
+
+README.md			-	Main documentation
+QUICK_REFERENCE.md		-	Command cheat sheet
+SYMBOL_MANAGEMENT_GUIDE.md	-	How to add stocks
+PAPER_TRADING_GUIDE.md		-	How paper trading works
+COMPLETE_ROADMAP.md		-	90-day testing plan
+CLOUD_DEPLOYMENT_FREE.md	-	How to deploy
+
+
+1. EDIT SYMBOLS (Once)
+   └─ notepad symbols.txt
+
+2. RUN SCHEDULER (Daily during market hours)
+   └─ python scheduler.py --interval 1h
+   
+3. GET ALERTS (Automatic)
+   └─ Telegram: 🟢 BUY AAPL at $180.50
+
+4. CHECK DASHBOARD (Optional, when you want details)
+   └─ https://your-dashboard.streamlit.app
+
+
+
+Alpaca 2FA:
+
+c7482d56-b7ba-469a-a404-a705ee173ce8
+
+
+https://paper-api.alpaca.markets/v2
+PKKE5WGIG2YD72BOVQZDMALWGK
+CaQTtYycVyp27ySx3zCaJtNqm8JTnyrzDX1G15re3WoC
+

@@ -39,6 +39,8 @@ backups/
 # Sensitive data
 config_private.py
 secrets.toml
+.env
+.streamlit/secrets.toml
 
 # Keep but ignore local changes
 symbols_local.txt

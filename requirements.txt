@@ -11,17 +11,23 @@ yfinance>=0.2.28
 # Visualization
 matplotlib>=3.7.0
 
-# Dashboard and Rich Output (NEW!)
+# Dashboard and Rich Output
 streamlit>=1.30.0
 rich>=13.7.0
 plotly>=5.18.0
 
-# Telegram Integration (NEW!)
+# Telegram Integration
 python-telegram-bot>=20.7
 
-# Scheduling & Automation (NEW!)
+# Scheduling & Automation
 schedule>=1.2.0
 python-dotenv>=1.0.0
 
-# Optional: For more advanced features (not required for basic bot)
+# Alpaca Trading (Paper Trading Platform)
+alpaca-trade-api>=3.0.0
+
+# Optional: For more advanced features
 # ta>=0.11.0  # Technical analysis library
+
+pytz>=2024.1
+requests>=2.31.0

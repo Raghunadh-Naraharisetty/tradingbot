@@ -290,12 +290,14 @@ except Exception as e:
 
 # Trading timeframe: How often to check for signals
 # Options: '1m', '5m', '15m', '1h', '1d'
-TIMEFRAME = '1d'  # Daily candles (easier for beginners)
+#TIMEFRAME = '1d'  # Daily candles (easier for beginners)
+TIMEFRAME = '15m'  # 15-minute candles (more frequent signals)
+
 
 # Historical data period for analysis
 # Options: '1d', '5d', '1mo', '3mo', '6mo', '1y'
-DATA_PERIOD = '1mo'  # 6 months of historical data
-
+DATA_PERIOD = '1y'  # 1 year of historical data
+#DATA_PERIOD = '1mo'  # 6 months of historical data
 
 # MULTI-STRATEGY SYSTEM CONFIGURATION
 # ====================================

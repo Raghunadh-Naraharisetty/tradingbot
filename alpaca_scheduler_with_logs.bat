@@ -11,4 +11,6 @@ set logfile=logs\bot_%date:~-4,4%%date:~-10,2%%date:~-7,2%.log
 echo Starting Trading Bot - %date% %time% > %logfile%
 python alpaca_scheduler.py --interval -5m >> %logfile% 2>&1
 
+:: python alpaca_scheduler.py --interval -15m >> %logfile% 2>&1
+
 echo Bot stopped - %date% %time% >> %logfile%

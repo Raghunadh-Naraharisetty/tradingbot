@@ -1,26 +1,30 @@
 """
-ALPACA_SCHEDULER.PY - Updated with Interval Telegram Updates
-=============================================================
-Sends Telegram message EVERY scan showing:
-- Scan number and time
-- Symbols checked
-- Signals found (or no signals)
-- Portfolio value
+ALPACA_SCHEDULER.PY — Upgraded with Enhanced Signals + News
+============================================================
+What's new:
+  ✅ 5 indicators (MA + RSI + MACD + Bollinger + Volume)
+  ✅ Confidence scoring (WEAK / MEDIUM / STRONG)
+  ✅ Alpaca News sentiment filter
+  ✅ Earnings calendar — auto-skip risky days
+  ✅ Position sizing based on confidence
+  ✅ Rich Telegram messages with score + news context
+  ✅ Interval updates every scan
 
 Usage:
-    python alpaca_scheduler.py --interval 15m
+    python alpaca_scheduler.py --interval 5m
 """
 
 import argparse
 import time
-from datetime import datetime
 import asyncio
+from datetime import datetime
 from dotenv import load_dotenv
 import schedule
 
 import config
-from model import TradingModel
 from alpaca_integration import AlpacaTrader
+from enhanced_signals import analyze_symbol, get_position_size, format_signal_summary
+from news_integration import NewsIntegration
 
 try:
     from telegram_bot import TelegramNotifier
@@ -31,229 +35,317 @@ except:
 load_dotenv()
 
 
-class AlpacaScheduler:
+class UpgradedScheduler:
+    """
+    Professional trading scheduler with full signal stack:
+    5 indicators + news + earnings calendar.
+    """
 
-    def __init__(self, interval='15m', symbols=None, telegram_enabled=True):
-        self.interval = interval
-        self.symbols = symbols or config.SYMBOLS
-        self.telegram_enabled = telegram_enabled
-        self.scan_count = 0
+    def __init__(self, interval="5m", symbols=None, telegram_enabled=True,
+                 news_enabled=True, base_position=2000.0):
 
-        self.model = TradingModel()
-        self.alpaca = AlpacaTrader()
+        self.interval        = interval
+        self.symbols         = symbols or config.SYMBOLS
+        self.telegram_on     = telegram_enabled
+        self.news_enabled    = news_enabled
+        self.base_position   = base_position
+        self.scan_count      = 0
+        self.total_signals   = 0
+
+        self.alpaca  = AlpacaTrader()
+        self.news    = NewsIntegration(self.alpaca._api if hasattr(self.alpaca, "_api") else None)
 
         if telegram_enabled and TELEGRAM_AVAILABLE:
             try:
                 self.notifier = TelegramNotifier()
-                print("✅ Telegram notifications enabled")
+                print("✅ Telegram enabled")
             except:
-                self.telegram_enabled = False
+                self.telegram_on = False
+        else:
+            self.telegram_on = False
 
-        print(f"\n🤖 Alpaca Scheduler initialized")
+        print(f"\n🚀 Upgraded Scheduler ready")
         print(f"   Interval: {interval}")
-        print(f"   Symbols: {len(self.symbols)} stocks")
-        print(f"   Telegram: {'Enabled' if self.telegram_enabled else 'Disabled'}")
+        print(f"   Symbols:  {len(self.symbols)}")
+        print(f"   News:     {'✅' if news_enabled else '❌'}")
+        print(f"   Position: ${base_position:,.0f} base (scales with confidence)")
+        print(f"   ─────────────────────────────────")
+        print(f"   STRONG signal → ${base_position:,.0f}")
+        print(f"   MEDIUM signal → ${base_position*0.6:,.0f}")
+        print(f"   WEAK signal   → ${base_position*0.3:,.0f} (caution)")
 
-    def run_analysis(self):
-        """Run trading analysis and send Telegram interval update."""
+    # ─────────────────────────────────────────────────────────
+    # MAIN SCAN
+    # ─────────────────────────────────────────────────────────
+
+    def run_scan(self):
         self.scan_count += 1
         now = datetime.now()
 
-        print(f"\n{'='*60}")
-        print(f"🔄 Scan #{self.scan_count} at {now.strftime('%Y-%m-%d %H:%M:%S')}")
-        print(f"{'='*60}")
+        print(f"\n{'═'*60}")
+        print(f"  Scan #{self.scan_count}  |  {now.strftime('%Y-%m-%d %H:%M:%S')}")
+        print(f"{'═'*60}")
 
-        signals_found = []
-        symbols_checked = 0
+        signals_this_scan = []
+        checked = 0
+        skipped_earnings = []
         errors = 0
 
         for symbol in self.symbols:
             try:
-                print(f"\n📊 Analyzing {symbol}...")
+                print(f"\n  📊 {symbol}...")
 
-                bars = self.alpaca.get_bars(symbol, '1Day', 100)
+                # ── Get price data from Alpaca ────────────────
+                bars = self.alpaca.get_bars(symbol, "1Day", 100)
                 if bars is None or bars.empty:
-                    print(f"   ⚠️  No data for {symbol}")
+                    print(f"     ⚠️  No data")
                     errors += 1
                     continue
 
-                symbols_checked += 1
-                self.model.market_data[symbol] = bars
-                self.model.calculate_all_indicators(symbol)
+                checked += 1
 
-                signal = self.model.generate_multi_strategy_signal(symbol)
-                current_price = self.alpaca.get_price(symbol)
+                # ── Enhanced signal analysis ──────────────────
+                result = analyze_symbol(symbol, bars)
+                if not result:
+                    print(f"     ⚠️  Analysis failed")
+                    continue
 
-                if signal == 'BUY':
-                    print(f"   🟢 BUY signal!")
-                    buying_power = self.alpaca.get_buying_power()
-                    position_size = buying_power * config.MAX_POSITION_SIZE
+                signal     = result["signal"]
+                confidence = result["confidence"]
+                score      = result["score"]
+
+                # ── News + earnings context ───────────────────
+                news_note = ""
+                if self.news_enabled and signal != "HOLD":
+                    context = self.news.get_full_context(symbol)
+
+                    # Block on earnings warnings
+                    if context["should_skip"]:
+                        skipped_earnings.append(symbol)
+                        print(f"     🚫 SKIPPED: {context['skip_reason']}")
+                        continue
+
+                    # Adjust signal based on news
+                    signal, confidence, score, news_note = self.news.apply_news_to_signal(
+                        signal, confidence, score, context
+                    )
+
+                    if signal == "HOLD":
+                        print(f"     ⬇️  Downgraded by news: {news_note}")
+                        continue
+
+                # ── Final signal decision ─────────────────────
+                if signal == "HOLD":
+                    print(f"     ⚪ HOLD  (score: {score}/10)")
+                    continue
+
+                icon = "🟢" if signal == "BUY" else "🔴"
+                conf_icon = {"STRONG":"🔥","MEDIUM":"⚡","WEAK":"💧"}.get(confidence,"")
+                print(f"     {icon} {signal} | {confidence} {conf_icon} | Score: {score}/10")
+                if news_note:
+                    print(f"     📰 {news_note}")
+
+                # ── Execute trade ─────────────────────────────
+                position_size = get_position_size(confidence, self.base_position)
+                executed      = False
+
+                if signal == "BUY" and position_size > 0:
                     order = self.alpaca.buy(symbol, notional=position_size)
                     if order:
-                        signals_found.append({
-                            'symbol': symbol, 'signal': 'BUY', 'price': current_price
-                        })
+                        executed = True
+                        print(f"     ✅ BUY executed: ${position_size:,.0f}")
 
-                elif signal == 'SELL':
-                    print(f"   🔴 SELL signal!")
+                elif signal == "SELL":
                     position = self.alpaca.get_position(symbol)
                     if position:
                         order = self.alpaca.sell(symbol)
                         if order:
-                            signals_found.append({
-                                'symbol': symbol, 'signal': 'SELL', 'price': current_price
-                            })
-                else:
-                    print(f"   ⚪ HOLD")
+                            executed = True
+                            print(f"     ✅ SELL executed")
+
+                signals_this_scan.append({
+                    **result,
+                    "signal":     signal,
+                    "confidence": confidence,
+                    "score":      score,
+                    "news_note":  news_note,
+                    "executed":   executed,
+                    "position_size": position_size,
+                })
+
+                self.total_signals += 1
 
             except Exception as e:
-                print(f"   ❌ Error: {e}")
+                print(f"     ❌ Error: {e}")
                 errors += 1
 
-        # Get portfolio status
+        # ── Portfolio snapshot ────────────────────────────────
         portfolio_value = self.alpaca.get_portfolio_value()
-        buying_power = self.alpaca.get_buying_power()
-        positions = self.alpaca.get_all_positions()
+        buying_power    = self.alpaca.get_buying_power()
+        positions       = self.alpaca.get_all_positions()
 
-        print(f"\n{'='*60}")
-        print(f"💼 Portfolio: ${portfolio_value:,.2f} | Positions: {len(positions)}")
-        print(f"{'='*60}")
+        print(f"\n  {'─'*56}")
+        print(f"  💼 Portfolio: ${portfolio_value:,.2f}  |  Positions: {len(positions)}")
+        if skipped_earnings:
+            print(f"  ⚠️  Skipped (earnings): {', '.join(skipped_earnings)}")
+        print(f"  {'─'*56}")
 
-        # Send Telegram update every interval
-        if self.telegram_enabled:
-            asyncio.run(self._send_interval_update(
-                scan_count=self.scan_count,
-                symbols_checked=symbols_checked,
-                signals_found=signals_found,
-                portfolio_value=portfolio_value,
-                positions=len(positions),
-                buying_power=buying_power,
-                errors=errors,
-                now=now
+        # ── Send Telegram update ──────────────────────────────
+        if self.telegram_on:
+            asyncio.run(self._send_telegram_update(
+                signals_this_scan, checked, errors,
+                portfolio_value, buying_power,
+                len(positions), skipped_earnings, now
             ))
 
-    async def _send_interval_update(self, scan_count, symbols_checked,
-                                     signals_found, portfolio_value,
-                                     positions, buying_power, errors, now):
-        """Send status update + signal alerts every interval."""
+    # ─────────────────────────────────────────────────────────
+    # TELEGRAM
+    # ─────────────────────────────────────────────────────────
 
-        # Send individual BUY/SELL alerts first
-        for sig in signals_found:
-            try:
-                await self.notifier.send_simple_signal(
-                    sig['symbol'], sig['signal'], sig['price']
-                )
-                await asyncio.sleep(0.3)
-            except Exception as e:
-                print(f"⚠️  Signal alert error: {e}")
-
-        # Send scan summary
+    async def _send_telegram_update(self, signals, checked, errors,
+                                     portfolio_value, buying_power,
+                                     positions, skipped, now):
         try:
-            if signals_found:
-                signal_lines = '\n'.join([
-                    f"{'🟢' if s['signal'] == 'BUY' else '🔴'} "
-                    f"{s['signal']} {s['symbol']} @ ${s['price']:.2f}"
-                    for s in signals_found
-                ])
-                signals_text = f"\n🎯 <b>Signals:</b>\n{signal_lines}"
-            else:
-                signals_text = "\n⚪ No signals this scan"
+            # Individual signal alerts
+            for sig in signals:
+                try:
+                    msg = format_signal_summary(sig)
+                    if msg:
+                        await self.notifier.send_message(msg)
+                        await asyncio.sleep(0.3)
+                except:
+                    pass
 
-            message = (
-                f"📊 <b>Scan #{scan_count}</b>  |  "
+            # Scan summary
+            if signals:
+                sig_lines = "\n".join([
+                    f"  {'🟢' if s['signal']=='BUY' else '🔴'} {s['signal']} "
+                    f"{s['symbol']} | {s['confidence']} {s['score']}/10 | "
+                    f"${s['price']:.2f}"
+                    for s in signals
+                ])
+                sig_section = f"\n\n<b>🎯 Signals:</b>\n{sig_lines}"
+            else:
+                sig_section = "\n\n⚪ <i>No signals this scan</i>"
+
+            skipped_text = ""
+            if skipped:
+                skipped_text = f"\n⚠️ Earnings skip: {', '.join(skipped)}"
+
+            summary = (
+                f"📊 <b>Scan #{self.scan_count}</b>  ·  "
                 f"🕐 {now.strftime('%H:%M:%S')}\n"
                 f"{'─'*28}\n"
-                f"✅ Checked: {symbols_checked}/{len(self.symbols)} symbols\n"
-                f"🔍 Signals: {len(signals_found)}"
-                f"{signals_text}\n"
+                f"✅ Checked: {checked}/{len(self.symbols)}\n"
+                f"🎯 Signals: {len(signals)}{skipped_text}"
+                f"{sig_section}\n\n"
                 f"{'─'*28}\n"
                 f"💼 Portfolio: <b>${portfolio_value:,.2f}</b>\n"
                 f"💵 Cash: ${buying_power/2:,.2f}\n"
-                f"📈 Positions: {positions}"
+                f"📈 Positions: {positions}\n"
+                f"📊 Total signals today: {self.total_signals}"
             )
 
-            await self.notifier.send_message(message)
+            await self.notifier.send_message(summary)
 
         except Exception as e:
-            print(f"⚠️  Interval update error: {e}")
+            print(f"  ⚠️  Telegram error: {e}")
+
+    # ─────────────────────────────────────────────────────────
+    # START
+    # ─────────────────────────────────────────────────────────
 
     def start(self):
-        """Start the scheduler."""
-        print(f"\n🚀 Starting Alpaca scheduler | Every {self.interval}")
+        print(f"\n🚀 Starting scheduler  |  Every {self.interval}")
         print(f"   Press Ctrl+C to stop\n")
 
         if not self.alpaca.test_connection():
-            print("❌ Alpaca connection failed. Check API keys in .env")
+            print("❌ Alpaca connection failed")
             return
 
         # Startup Telegram message
-        if self.telegram_enabled:
+        if self.telegram_on:
             try:
                 asyncio.run(self.notifier.send_message(
-                    f"🤖 <b>Trading Bot Started</b>\n\n"
-                    f"⏱ Interval: Every {self.interval}\n"
-                    f"📊 Watching: {len(self.symbols)} stocks\n"
-                    f"🌐 Platform: Alpaca Paper Trading\n"
-                    f"🕐 Started: {datetime.now().strftime('%H:%M:%S')}\n\n"
-                    f"<i>Status update every {self.interval} ✅</i>"
+                    f"🤖 <b>Enhanced Bot Started</b>\n\n"
+                    f"⏱ Interval: {self.interval}\n"
+                    f"📊 Watching: {len(self.symbols)} symbols\n"
+                    f"🔬 5 Indicators: MA · RSI · MACD · Bollinger · Volume\n"
+                    f"📰 News filter: {'✅' if self.news_enabled else '❌'}\n"
+                    f"📅 Earnings guard: ✅\n"
+                    f"💰 Position: ${self.base_position:,.0f} base\n"
+                    f"🕐 {datetime.now().strftime('%H:%M:%S')}\n\n"
+                    f"<i>Scan summary sent every {self.interval}</i>"
                 ))
             except:
                 pass
 
-        # Run first scan immediately
-        self.run_analysis()
+        # First scan immediately
+        self.run_scan()
 
-        # Schedule repeating scans
+        # Schedule repeating
         interval_map = {
-            '1m': 1, '5m': 5, '15m': 15,
-            '30m': 30, '1h': 60, '4h': 240
+            "1m":15, "5m":5, "15m":15, "30m":30, "1h":60, "4h":240
         }
         minutes = interval_map.get(self.interval, 15)
-        schedule.every(minutes).minutes.do(self.run_analysis)
+        schedule.every(minutes).minutes.do(self.run_scan)
 
         try:
             while True:
                 schedule.run_pending()
                 time.sleep(1)
-
         except KeyboardInterrupt:
-            print("\n\n⚠️  Scheduler stopped")
-            if self.telegram_enabled:
+            print("\n\n⛔ Bot stopped")
+            if self.telegram_on:
                 try:
-                    portfolio_value = self.alpaca.get_portfolio_value()
-                    positions = self.alpaca.get_all_positions()
+                    pv = self.alpaca.get_portfolio_value()
+                    pos = self.alpaca.get_all_positions()
                     asyncio.run(self.notifier.send_message(
-                        f"🛑 <b>Trading Bot Stopped</b>\n\n"
-                        f"📊 Total scans run: {self.scan_count}\n"
-                        f"💼 Final portfolio: ${portfolio_value:,.2f}\n"
-                        f"📈 Open positions: {len(positions)}\n"
-                        f"🕐 Stopped: {datetime.now().strftime('%H:%M:%S')}"
+                        f"🛑 <b>Bot Stopped</b>\n\n"
+                        f"📊 Scans: {self.scan_count}\n"
+                        f"🎯 Total signals: {self.total_signals}\n"
+                        f"💼 Final portfolio: ${pv:,.2f}\n"
+                        f"📈 Open positions: {len(pos)}\n"
+                        f"🕐 {datetime.now().strftime('%H:%M:%S')}"
                     ))
                 except:
                     pass
 
 
+# ─────────────────────────────────────────────────────────────
+# ENTRY POINT
+# ─────────────────────────────────────────────────────────────
+
 def main():
-    parser = argparse.ArgumentParser(description='Alpaca Trading Scheduler')
-    parser.add_argument('--interval', type=str, default='15m',
-                        choices=['1m', '5m', '15m', '30m', '1h', '4h'])
-    parser.add_argument('--symbols', type=str)
-    parser.add_argument('--no-telegram', action='store_true')
+    parser = argparse.ArgumentParser(description="Enhanced Alpaca Scheduler")
+    parser.add_argument("--interval", default="5m",
+                        choices=["1m","5m","15m","30m","1h","4h"])
+    parser.add_argument("--symbols",  type=str,
+                        help="Comma separated: AAPL,MSFT,NVDA")
+    parser.add_argument("--position", type=float, default=2000.0,
+                        help="Base position size in dollars (default: 2000)")
+    parser.add_argument("--no-news",  action="store_true",
+                        help="Disable news integration")
+    parser.add_argument("--no-telegram", action="store_true")
     args = parser.parse_args()
 
     symbols = None
     if args.symbols:
-        symbols = [s.strip().upper() for s in args.symbols.split(',')]
+        symbols = [s.strip().upper() for s in args.symbols.split(",")]
 
     try:
-        scheduler = AlpacaScheduler(
-            interval=args.interval,
-            symbols=symbols,
-            telegram_enabled=not args.no_telegram
+        bot = UpgradedScheduler(
+            interval        = args.interval,
+            symbols         = symbols,
+            telegram_enabled= not args.no_telegram,
+            news_enabled    = not args.no_news,
+            base_position   = args.position,
         )
-        scheduler.start()
+        bot.start()
     except Exception as e:
-        print(f"❌ Error: {e}")
+        print(f"❌ Fatal error: {e}")
+        import traceback
+        traceback.print_exc()
 
 
 if __name__ == "__main__":
